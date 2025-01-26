@@ -1,7 +1,7 @@
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
 
-import { TURNDOWN_SCRIPT } from './constants'
+import { NON_CONTENT_SELECTORS, TURNDOWN_SCRIPT } from './constants'
 import { ProcessingError } from './errors'
 import { isBlockedDomain, isBlockedMedia } from './utils'
 
@@ -71,50 +71,6 @@ async function writeDebugFile(
 	await writeFile(filepath, content, 'utf-8')
 	console.log(`[DEBUG] Wrote ${stage} content to ${filepath}`)
 }
-
-// Common HTML cleaning selectors
-const NON_CONTENT_SELECTORS = [
-	'script',
-	'style',
-	'iframe',
-	'noscript',
-	'header nav',
-	'nav:not([aria-label])',
-	'footer',
-	'[role="navigation"]',
-	'[role="banner"]',
-	'[role="contentinfo"]',
-	'[role="complementary"]',
-	'[aria-hidden="true"]',
-	'[data-nosnippet]',
-	'.cookie-banner',
-	'.ad',
-	'.ads',
-	'.advertisement',
-	'#comments',
-	'.comments',
-	// Footer selectors
-	'.colophon',
-	'.site-footer',
-	'.footer',
-	'.footer-content',
-	'.footer-widgets',
-	'[class*="footer"]',
-	'[id*="footer"]',
-	'.bottom-bar',
-	'.bottom-content',
-	// Common UI elements
-	'.go-to-top',
-	'.scroll-to-top',
-	'.back-to-top',
-	'[class*="to-top"]',
-	'[id*="to-top"]',
-	'.hidden-print',
-	'[aria-hidden]',
-	'[class*="social-"]',
-	'.share-buttons',
-	'.print-button',
-]
 
 // Common Turndown configuration and rules
 const TURNDOWN_CONFIG = {
