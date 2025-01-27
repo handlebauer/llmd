@@ -7,7 +7,7 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"test": "vitest",
+		"test": "bun test",
 		"cf-typegen": "wrangler types",
 		"local": "bun src/local.ts"
 	},

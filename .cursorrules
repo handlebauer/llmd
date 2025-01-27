@@ -1,0 +1,27 @@
+1. This is a typescript Cloudflare wrangler project using bun (not a node project)
+
+```bash
+bun add [package]
+bun remove [package]
+bun run [script]
+bun publish [options]
+bun build [options]
+bun test [options]
+```
+
+2. Use bun's built-in io functions
+
+```ts
+const data = { hello: 'world' }
+await Bun.write('file.json', JSON.stringify(data))
+await Bun.file('file.json').json()
+await Bun.file('file.json').exists()
+await Bun.file('file.json').delete()
+```
+
+3. Use import/export syntax, not require
+
+```ts
+import { config } from '~/config'
+import { logger } from '~/utils'
+```
