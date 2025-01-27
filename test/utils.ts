@@ -20,6 +20,14 @@ export const createTestEnv = () => ({
 				),
 			),
 	},
+	URL_CACHE: {
+		get: async () => null,
+		getWithMetadata: async () => ({ value: null, metadata: null }),
+		put: async () => undefined,
+		delete: async () => undefined,
+		list: async () => ({ keys: [], list_complete: true, cursor: '' }),
+		getWithOptions: async () => null,
+	} as unknown as KVNamespace,
 })
 
 export const createMockBrowser = (

@@ -1,4 +1,8 @@
-import type { Page as CloudflarePage } from '@cloudflare/puppeteer'
+/// <reference types="@cloudflare/workers-types" />
+import type {
+	BrowserWorker,
+	Page as CloudflarePage,
+} from '@cloudflare/puppeteer'
 import type { Page as PuppeteerPage } from 'puppeteer'
 
 // Shared interface that defines only the methods we need from both page types
@@ -43,4 +47,9 @@ export function isPuppeteerPage(page: any): page is PuppeteerPage {
 		'browser' in page &&
 		'_frameManager' in page
 	)
+}
+
+export interface Environment {
+	MYBROWSER: BrowserWorker
+	URL_CACHE: KVNamespace
 }

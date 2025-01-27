@@ -1,6 +1,6 @@
 import { isBlockedDomain, isBlockedMedia } from './validation'
 
-import type { Page } from './types'
+import type { Environment, Page } from './types'
 
 // Common request interception logic
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,7 +57,9 @@ export async function navigateWithFallback(
 }
 
 // Browser initialization for Cloudflare
-export async function initializeCloudflareWorker(env: { MYBROWSER: Fetcher }) {
+export async function initializeCloudflareWorker(
+	env: Pick<Environment, 'MYBROWSER'>,
+) {
 	const browser = await (
 		await import('@cloudflare/puppeteer')
 	).default.launch(env.MYBROWSER)

@@ -1,6 +1,6 @@
 import { navigateWithFallback } from '../utils/browser'
 
-import type { Page } from '../utils/types'
+import type { Environment, Page } from '../utils/types'
 
 export interface CrawlResult {
 	url: string
@@ -91,6 +91,7 @@ export async function crawlSite(
 	baseUrl: string,
 	maxPages: number = 10,
 	processPage?: (page: Page) => Promise<string>,
+	env?: Environment,
 ): Promise<CrawlSiteResult> {
 	const startTime = new Date()
 	const errors: Array<{ url: string; error: string }> = []
@@ -173,7 +174,7 @@ export async function crawlSite(
 		const durationMs = new Date().getTime() - startTime.getTime()
 
 		console.log(`[DEBUG] Crawl complete. Visited ${visited.size} pages`)
-		return {
+		const result = {
 			links: Array.from(allLinks),
 			pages: results,
 			metadata: {
@@ -195,6 +196,15 @@ export async function crawlSite(
 				},
 			},
 		}
+
+		// Cache the result for 2.5 minutes
+		if (env?.URL_CACHE) {
+			await env.URL_CACHE.put(baseUrl, JSON.stringify(result), {
+				expirationTtl: 150, // 2.5 minutes in seconds
+			})
+		}
+
+		return result
 	} finally {
 		// Clean up page state
 		await page.setRequestInterception(false)

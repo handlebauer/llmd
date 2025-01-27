@@ -1,11 +1,14 @@
-import { crawlSite, extractInternalLinks, processCloudFlarePage } from '../core'
+/// <reference types="@cloudflare/workers-types" />
+import { crawlSite, extractInternalLinks } from '../core/links'
+import { processCloudFlarePage } from '../core/markdown'
 import {
 	initializeCloudflareWorker,
 	navigateWithFallback,
-	setupCloudflarePageInterception,
 } from '../utils/browser'
 import { ValidationError } from '../utils/errors'
 import { validateUrl } from '../utils/validation'
+
+import type { Environment } from '../utils/types'
 
 // Declare global types for the Worker environment
 declare global {
@@ -14,9 +17,7 @@ declare global {
 }
 
 // Types
-interface Env {
-	MYBROWSER: Fetcher
-}
+type Env = Environment
 
 // Main worker handler
 export default {
@@ -41,15 +42,43 @@ export default {
 				'Please provide a valid URL in the path',
 			)
 
+			// Check cache based on action
+			const cacheKey = `${action}:${validatedUrl}`
+			const cached = await env.URL_CACHE.get(cacheKey, 'json')
+			if (cached) {
+				console.log(`[DEBUG] Cache hit for ${cacheKey}`)
+				const headers = {
+					'Content-Type':
+						action === 'scrape'
+							? 'text/markdown'
+							: 'application/json',
+					'Cache-Control': 'public, max-age=3600',
+				}
+				return new Response(
+					typeof cached === 'string'
+						? cached
+						: JSON.stringify(cached),
+					{ headers },
+				)
+			}
+
 			const { browser, page } = await initializeCloudflareWorker(env)
 
 			try {
-				await setupCloudflarePageInterception(page)
+				await page.setRequestInterception(true)
 
 				switch (action) {
 					case 'scrape': {
 						await navigateWithFallback(page, validatedUrl)
 						const markdown = await processCloudFlarePage(page)
+
+						// Cache the scrape result
+						await env.URL_CACHE.put(
+							cacheKey,
+							markdown,
+							{ expirationTtl: 150 }, // 2.5 minutes
+						)
+
 						return new Response(markdown, {
 							headers: {
 								'Content-Type': 'text/markdown',
@@ -59,14 +88,22 @@ export default {
 					}
 
 					case 'crawl': {
-						const results = await crawlSite(
+						const result = await crawlSite(
 							page,
 							validatedUrl,
 							10,
 							processCloudFlarePage,
+							env,
 						)
 
-						return new Response(JSON.stringify(results), {
+						// Cache the crawl result
+						await env.URL_CACHE.put(
+							cacheKey,
+							JSON.stringify(result),
+							{ expirationTtl: 150 }, // 2.5 minutes
+						)
+
+						return new Response(JSON.stringify(result), {
 							headers: {
 								'Content-Type': 'application/json',
 								'Cache-Control': 'public, max-age=3600',
@@ -80,19 +117,25 @@ export default {
 							page,
 							validatedUrl,
 						)
-						return new Response(
-							JSON.stringify({
-								url: validatedUrl,
-								count: links.length,
-								links,
-							}),
-							{
-								headers: {
-									'Content-Type': 'application/json',
-									'Cache-Control': 'public, max-age=3600',
-								},
-							},
+						const result = {
+							url: validatedUrl,
+							count: links.length,
+							links,
+						}
+
+						// Cache the links result
+						await env.URL_CACHE.put(
+							cacheKey,
+							JSON.stringify(result),
+							{ expirationTtl: 150 }, // 2.5 minutes
 						)
+
+						return new Response(JSON.stringify(result), {
+							headers: {
+								'Content-Type': 'application/json',
+								'Cache-Control': 'public, max-age=3600',
+							},
+						})
 					}
 
 					default:

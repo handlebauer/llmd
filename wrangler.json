@@ -17,9 +17,13 @@
 	"browser": {
 		"binding": "MYBROWSER"
 	},
-	"ai": {
-		"binding": "AI"
-	}
+	"kv_namespaces": [
+		{
+			"binding": "URL_CACHE",
+			"id": "d50ade51c23d43709931bfa60f02cfaf",
+			"preview_id": "26a74f6496b5419996aea5940e5e9665"
+		}
+	]
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
