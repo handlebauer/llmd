@@ -1,5 +1,3 @@
-import { dirname } from 'path'
-import { fileURLToPath } from 'url'
 import typescriptPlugin from '@typescript-eslint/eslint-plugin'
 import typescriptParser from '@typescript-eslint/parser'
 
