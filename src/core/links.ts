@@ -101,7 +101,6 @@ export async function crawlSite(
 	await page.setRequestInterception(false)
 	await page.setRequestInterception(true)
 
-	const normalizedBaseUrl = normalizeUrl(baseUrl)
 	const visited = new Set<string>()
 	const toVisit = new Set([baseUrl])
 	const results: CrawlResult[] = []

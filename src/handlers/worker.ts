@@ -9,6 +9,7 @@ import { validateUrl } from '../utils/validation'
 
 // Declare global types for the Worker environment
 declare global {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	var TurndownService: any
 }
 

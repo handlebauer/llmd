@@ -3,6 +3,7 @@ import { isBlockedDomain, isBlockedMedia } from './validation'
 import type { Page } from './types'
 
 // Common request interception logic
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handleRequest(request: any) {
 	try {
 		const { hostname, pathname } = new URL(request.url())
@@ -16,7 +17,7 @@ function handleRequest(request: any) {
 
 		const isBlocked = isBlockedDomain(hostname) || isBlockedMedia(pathname)
 		isBlocked ? request.abort() : request.continue()
-	} catch (error) {
+	} catch (_) {
 		// If URL parsing fails, continue the request
 		request.continue()
 	}

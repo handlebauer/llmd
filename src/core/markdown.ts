@@ -76,6 +76,7 @@ async function processPage(page: Page, isLocal: boolean): Promise<string> {
 	const turndownScriptContent = await turndownResponse.text()
 
 	// Get the cleaned HTML content
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const htmlContent = await (page.evaluate as any)((selectors: string[]) => {
 		try {
 			const documentClone = document.cloneNode(true) as Document
@@ -97,10 +98,11 @@ async function processPage(page: Page, isLocal: boolean): Promise<string> {
 	}
 
 	// Convert to markdown
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const markdown = await (page.evaluate as any)(
 		(
 			content: string,
-			config: any,
+			config: typeof TURNDOWN_CONFIG,
 			rules: Record<string, TurndownRule>,
 			scriptContent: string,
 		) => {
@@ -111,6 +113,7 @@ async function processPage(page: Page, isLocal: boolean): Promise<string> {
 					script.textContent = scriptContent
 					document.head.appendChild(script)
 
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					const TurndownService = (window as any).TurndownService
 					if (!TurndownService) {
 						throw new Error(
