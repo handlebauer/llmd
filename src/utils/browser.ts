@@ -16,9 +16,17 @@ function handleRequest(request: any) {
 		}
 
 		const isBlocked = isBlockedDomain(hostname) || isBlockedMedia(pathname)
-		isBlocked ? request.abort() : request.continue()
+		if (isBlocked) {
+			console.log(
+				`[DEBUG] Blocked request: ${request.url()} (${resourceType})`,
+			)
+			request.abort()
+		} else {
+			request.continue()
+		}
 	} catch (_) {
 		// If URL parsing fails, continue the request
+		console.log(`[DEBUG] URL parsing failed for request: ${request.url()}`)
 		request.continue()
 	}
 }
@@ -43,16 +51,32 @@ export async function setupCloudflarePageInterception(
 export async function navigateWithFallback(
 	page: Page,
 	url: string,
-	timeoutMs = 15000,
+	timeoutMs = 30000,
 ): Promise<void> {
 	const navigationOptions = { timeout: timeoutMs }
 	try {
+		console.log(
+			`[DEBUG] Attempting navigation to ${url} with 'load' strategy`,
+		)
 		await page.goto(url, { ...navigationOptions, waitUntil: 'load' })
-	} catch {
-		await page.goto(url, {
-			...navigationOptions,
-			waitUntil: 'networkidle0',
-		})
+	} catch (error) {
+		console.log(
+			`[DEBUG] 'load' strategy failed, trying 'networkidle0': ${error instanceof Error ? error.message : 'Unknown error'}`,
+		)
+		try {
+			await page.goto(url, {
+				...navigationOptions,
+				waitUntil: 'networkidle0',
+			})
+		} catch (fallbackError) {
+			console.error(
+				`[ERROR] Both navigation strategies failed for ${url}:`,
+				fallbackError instanceof Error
+					? fallbackError.message
+					: 'Unknown error',
+			)
+			throw fallbackError
+		}
 	}
 }
 
@@ -64,6 +88,12 @@ export async function initializeCloudflareWorker(
 		await import('@cloudflare/puppeteer')
 	).default.launch(env.MYBROWSER)
 	const page = (await browser.newPage()) as Page
+
+	// Set up request interception before any navigation
+	await page.setRequestInterception(false) // Reset first
+	await page.setRequestInterception(true)
+	page.on('request', handleRequest)
+
 	console.log('[DEBUG] Browser initialized and page created')
 	return { browser, page }
 }
@@ -72,6 +102,12 @@ export async function initializeCloudflareWorker(
 export async function initializeLocalBrowser() {
 	const browser = await (await import('puppeteer')).default.launch()
 	const page = (await browser.newPage()) as Page
+
+	// Set up request interception before any navigation
+	await page.setRequestInterception(false) // Reset first
+	await page.setRequestInterception(true)
+	page.on('request', handleRequest)
+
 	console.log('[DEBUG] Browser initialized and page created')
 	return { browser, page }
 }

@@ -44,7 +44,10 @@ export default {
 
 			// Check cache based on action
 			const cacheKey = `${action}:${validatedUrl}`
-			const cached = await env.URL_CACHE.get(cacheKey, 'json')
+			const cached =
+				action === 'scrape'
+					? await env.URL_CACHE.get(cacheKey) // Get raw text for markdown
+					: await env.URL_CACHE.get(cacheKey, 'json') // Parse JSON for other actions
 			if (cached) {
 				console.log(`[DEBUG] Cache hit for ${cacheKey}`)
 				const headers = {
@@ -54,19 +57,16 @@ export default {
 							: 'application/json',
 					'Cache-Control': 'public, max-age=3600',
 				}
-				return new Response(
-					typeof cached === 'string'
-						? cached
-						: JSON.stringify(cached),
-					{ headers },
-				)
+				const responseText =
+					action === 'scrape'
+						? String(cached)
+						: JSON.stringify(cached)
+				return new Response(responseText, { headers })
 			}
 
 			const { browser, page } = await initializeCloudflareWorker(env)
 
 			try {
-				await page.setRequestInterception(true)
-
 				switch (action) {
 					case 'scrape': {
 						await navigateWithFallback(page, validatedUrl)
