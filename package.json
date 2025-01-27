@@ -5,7 +5,7 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
+		"dev": "wrangler dev --remote",
 		"start": "wrangler dev",
 		"test": "bun test",
 		"cf-typegen": "wrangler types",
