@@ -23,6 +23,19 @@ type Env = Environment
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		try {
+			// Handle CORS preflight requests
+			if (request.method === 'OPTIONS') {
+				return new Response(null, {
+					headers: {
+						'Access-Control-Allow-Origin':
+							request.headers.get('Origin') || '*',
+						'Access-Control-Allow-Methods': 'GET, OPTIONS',
+						'Access-Control-Allow-Headers': 'Content-Type',
+						'Access-Control-Max-Age': '86400',
+					},
+				})
+			}
+
 			const url = new URL(request.url)
 			const path = url.pathname
 
@@ -33,7 +46,13 @@ export default {
 			if (!targetUrl) {
 				return new Response(
 					'Please provide a URL in the path: /[action]/https://example.com',
-					{ status: 400 },
+					{
+						status: 400,
+						headers: {
+							'Access-Control-Allow-Origin':
+								request.headers.get('Origin') || '*',
+						},
+					},
 				)
 			}
 
@@ -56,6 +75,8 @@ export default {
 							? 'text/markdown'
 							: 'application/json',
 					'Cache-Control': 'public, max-age=3600',
+					'Access-Control-Allow-Origin':
+						request.headers.get('Origin') || '*',
 				}
 				const responseText =
 					action === 'scrape'
@@ -83,6 +104,8 @@ export default {
 							headers: {
 								'Content-Type': 'text/markdown',
 								'Cache-Control': 'public, max-age=3600',
+								'Access-Control-Allow-Origin':
+									request.headers.get('Origin') || '*',
 							},
 						})
 					}
@@ -107,6 +130,8 @@ export default {
 							headers: {
 								'Content-Type': 'application/json',
 								'Cache-Control': 'public, max-age=3600',
+								'Access-Control-Allow-Origin':
+									request.headers.get('Origin') || '*',
 							},
 						})
 					}
@@ -134,6 +159,8 @@ export default {
 							headers: {
 								'Content-Type': 'application/json',
 								'Cache-Control': 'public, max-age=3600',
+								'Access-Control-Allow-Origin':
+									request.headers.get('Origin') || '*',
 							},
 						})
 					}
@@ -141,7 +168,13 @@ export default {
 					default:
 						return new Response(
 							'Invalid action. Use /scrape/, /crawl/, or /links/',
-							{ status: 400 },
+							{
+								status: 400,
+								headers: {
+									'Access-Control-Allow-Origin':
+										request.headers.get('Origin') || '*',
+								},
+							},
 						)
 				}
 			} finally {
@@ -157,14 +190,26 @@ export default {
 			})
 
 			if (error instanceof ValidationError) {
-				return new Response(error.message, { status: 400 })
+				return new Response(error.message, {
+					status: 400,
+					headers: {
+						'Access-Control-Allow-Origin':
+							request.headers.get('Origin') || '*',
+					},
+				})
 			}
 
 			return new Response(
 				error instanceof Error
 					? error.message
 					: 'Internal server error',
-				{ status: 500 },
+				{
+					status: 500,
+					headers: {
+						'Access-Control-Allow-Origin':
+							request.headers.get('Origin') || '*',
+					},
+				},
 			)
 		}
 	},
