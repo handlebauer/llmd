@@ -4,10 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import worker from '../../src/index'
 import { createMockBrowser, createTestEnv } from '../utils'
 
-interface CrawlResponse {
-	url: string
-	markdown: string
-}
+import type { CrawlSiteResult } from '../../src/core/links'
 
 describe('Crawl Endpoint', () => {
 	const EXPECTED_LINKS = [
@@ -42,7 +39,7 @@ describe('Crawl Endpoint', () => {
 			'http://localhost/crawl/https://example.com',
 		)
 		const response = await worker.fetch(request, createTestEnv() as any)
-		const results = (await response.json()) as CrawlResponse[]
+		const result = (await response.json()) as CrawlSiteResult
 
 		// Test response structure
 		expect(response.status).toBe(200)
@@ -51,19 +48,43 @@ describe('Crawl Endpoint', () => {
 			'public, max-age=3600',
 		)
 
-		// Test response content
-		expect(results).toHaveLength(EXPECTED_LINKS.length + 1) // +1 for the root URL
-		expect(results).toContainEqual({
+		// Test links array
+		expect(result.links).toEqual(expect.arrayContaining(EXPECTED_LINKS))
+		expect(result.links).toContain('https://example.com')
+
+		// Test pages array
+		expect(result.pages).toHaveLength(EXPECTED_LINKS.length + 1) // +1 for the root URL
+		expect(result.pages).toContainEqual({
 			url: 'https://example.com',
 			markdown: EXPECTED_MARKDOWN,
 		})
 
 		// Verify all crawled pages are converted
 		EXPECTED_LINKS.forEach(url => {
-			expect(results).toContainEqual({
+			expect(result.pages).toContainEqual({
 				url,
 				markdown: EXPECTED_MARKDOWN,
 			})
+		})
+
+		// Test metadata structure
+		expect(result.metadata).toMatchObject({
+			timing: {
+				durationMs: expect.any(Number),
+				averagePageTimeMs: expect.any(Number),
+			},
+			stats: {
+				successfulPages: EXPECTED_LINKS.length + 1,
+				failedPages: 0,
+				uniqueLinksDiscovered: EXPECTED_LINKS.length + 1,
+				maxDepthReached: expect.any(Number),
+				hitMaxPages: expect.any(Boolean),
+			},
+			errors: [],
+			config: {
+				baseUrl: 'https://example.com',
+				maxPages: expect.any(Number),
+			},
 		})
 	})
 

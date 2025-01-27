@@ -7,6 +7,34 @@ export interface CrawlResult {
 	markdown: string
 }
 
+export interface CrawlMetadata {
+	timing: {
+		durationMs: number
+		averagePageTimeMs: number
+	}
+	stats: {
+		successfulPages: number
+		failedPages: number
+		uniqueLinksDiscovered: number
+		maxDepthReached: number
+		hitMaxPages: boolean
+	}
+	errors: Array<{
+		url: string
+		error: string
+	}>
+	config: {
+		baseUrl: string
+		maxPages: number
+	}
+}
+
+export interface CrawlSiteResult {
+	links: string[]
+	pages: CrawlResult[]
+	metadata: CrawlMetadata
+}
+
 function normalizeUrl(url: string): string {
 	try {
 		const parsed = new URL(url)
@@ -63,7 +91,12 @@ export async function crawlSite(
 	baseUrl: string,
 	maxPages: number = 10,
 	processPage?: (page: Page) => Promise<string>,
-): Promise<CrawlResult[]> {
+): Promise<CrawlSiteResult> {
+	const startTime = new Date()
+	const errors: Array<{ url: string; error: string }> = []
+	let successfulPages = 0
+	let maxDepthReached = 0
+
 	// Reset page state
 	await page.setRequestInterception(false)
 	await page.setRequestInterception(true)
@@ -72,6 +105,7 @@ export async function crawlSite(
 	const visited = new Set<string>()
 	const toVisit = new Set([baseUrl])
 	const results: CrawlResult[] = []
+	const allLinks = new Set<string>([baseUrl])
 	console.log(`[DEBUG] Starting crawl of ${baseUrl} (max pages: ${maxPages})`)
 
 	try {
@@ -90,6 +124,12 @@ export async function crawlSite(
 				await navigateWithFallback(page, url)
 				console.log(`[DEBUG] Successfully loaded: ${url}`)
 				visited.add(normalizedUrl)
+				successfulPages++
+
+				// Calculate depth by counting slashes after domain
+				const urlPath = new URL(url).pathname
+				const depth = urlPath.split('/').filter(Boolean).length
+				maxDepthReached = Math.max(maxDepthReached, depth)
 
 				// Process the page content if a processor is provided
 				if (processPage) {
@@ -100,6 +140,9 @@ export async function crawlSite(
 				console.log(`[DEBUG] Extracting internal links from ${url}`)
 				const newLinks = await extractInternalLinks(page, baseUrl)
 				console.log(`[DEBUG] Found ${newLinks.length} internal links`)
+
+				// Add all discovered links to allLinks set
+				newLinks.forEach(link => allLinks.add(link))
 
 				let newLinksCount = 0
 				newLinks.forEach(link => {
@@ -120,11 +163,39 @@ export async function crawlSite(
 				)
 			} catch (error) {
 				console.error(`[ERROR] Failed to crawl ${url}:`, error)
+				errors.push({
+					url,
+					error:
+						error instanceof Error ? error.message : String(error),
+				})
 			}
 		}
 
+		const durationMs = new Date().getTime() - startTime.getTime()
+
 		console.log(`[DEBUG] Crawl complete. Visited ${visited.size} pages`)
-		return results
+		return {
+			links: Array.from(allLinks),
+			pages: results,
+			metadata: {
+				timing: {
+					durationMs,
+					averagePageTimeMs: Math.round(durationMs / successfulPages),
+				},
+				stats: {
+					successfulPages,
+					failedPages: errors.length,
+					uniqueLinksDiscovered: allLinks.size,
+					maxDepthReached,
+					hitMaxPages: visited.size >= maxPages,
+				},
+				errors,
+				config: {
+					baseUrl,
+					maxPages,
+				},
+			},
+		}
 	} finally {
 		// Clean up page state
 		await page.setRequestInterception(false)
