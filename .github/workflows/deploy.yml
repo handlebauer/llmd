@@ -20,6 +20,9 @@ jobs:
             - name: Install Dependencies
               run: bun install
 
+            - name: Initialize Husky
+              run: bunx husky init
+
             - name: Run Tests
               run: bun test
 
