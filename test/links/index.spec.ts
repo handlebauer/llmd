@@ -44,8 +44,8 @@ describe('Links Endpoint', () => {
 		// Test response content
 		expect(result).toEqual({
 			url: 'https://example.com',
-			count: EXPECTED_LINKS.length,
-			links: EXPECTED_LINKS,
+			count: EXPECTED_LINKS.length + 1,
+			links: ['https://example.com', ...EXPECTED_LINKS],
 		})
 
 		// Verify links are all internal to example.com

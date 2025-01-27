@@ -144,8 +144,8 @@ export default {
 						)
 						const result = {
 							url: validatedUrl,
-							count: links.length,
-							links,
+							count: links.length + 1, // +1 for the provided URL
+							links: [validatedUrl, ...links], // Include the provided URL at the start
 						}
 
 						// Cache the links result
