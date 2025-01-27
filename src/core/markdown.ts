@@ -1,76 +1,7 @@
-import { writeFile } from 'fs/promises'
-import { join } from 'path'
+import { NON_CONTENT_SELECTORS, TURNDOWN_SCRIPT } from '../utils/constants'
+import { ProcessingError } from '../utils/errors'
 
-import { NON_CONTENT_SELECTORS, TURNDOWN_SCRIPT } from './constants'
-import { ProcessingError } from './errors'
-import { isBlockedDomain, isBlockedMedia } from './utils'
-
-import type { Page as CloudflarePage } from '@cloudflare/puppeteer'
-import type { HTTPRequest, Page as PuppeteerPage } from 'puppeteer'
-
-// Common request interception logic
-function handleRequest(request: any) {
-	const { hostname, pathname } = new URL(request.url())
-	const isBlocked = isBlockedDomain(hostname) || isBlockedMedia(pathname)
-	isBlocked ? request.abort() : request.continue()
-}
-
-// Page management for regular Puppeteer
-export async function setupPuppeteerPageInterception(
-	page: PuppeteerPage,
-): Promise<void> {
-	await page.setRequestInterception(true)
-	page.on('request', handleRequest)
-}
-
-// Page management for Cloudflare Puppeteer
-export async function setupCloudflarePageInterception(
-	page: CloudflarePage,
-): Promise<void> {
-	await page.setRequestInterception(true)
-	page.on('request', handleRequest)
-}
-
-// Navigation for both implementations
-export async function navigateWithFallback(
-	page: PuppeteerPage | CloudflarePage,
-	url: string,
-	timeoutMs = 15000,
-): Promise<void> {
-	const navigationOptions = { timeout: timeoutMs }
-	try {
-		await page.goto(url, { ...navigationOptions, waitUntil: 'load' })
-	} catch {
-		await page.goto(url, {
-			...navigationOptions,
-			waitUntil: 'networkidle0',
-		})
-	}
-}
-
-// Common page processing types and functions
-interface ProcessingContext {
-	hostname: string
-	isLocal: boolean
-}
-
-async function injectScripts(page: PuppeteerPage | CloudflarePage) {
-	await page.addScriptTag({ url: TURNDOWN_SCRIPT })
-}
-
-async function writeDebugFile(
-	context: ProcessingContext,
-	content: string,
-	stage: string,
-	extension: string,
-) {
-	if (!context.isLocal) return
-
-	const filename = `${context.hostname}.${stage}.${extension}`
-	const filepath = join('_debug', filename)
-	await writeFile(filepath, content, 'utf-8')
-	console.log(`[DEBUG] Wrote ${stage} content to ${filepath}`)
-}
+import type { Page } from '../utils/types'
 
 // Common Turndown configuration and rules
 const TURNDOWN_CONFIG = {
@@ -132,10 +63,7 @@ const TURNDOWN_RULES: Record<string, TurndownRule> = {
 }
 
 // Common page processing function
-async function processPage(
-	page: PuppeteerPage | CloudflarePage,
-	isLocal: boolean,
-): Promise<string> {
+async function processPage(page: Page, isLocal: boolean): Promise<string> {
 	console.log('[DEBUG] Starting page evaluation')
 	const hostname = new URL(page.url()).hostname
 
@@ -163,8 +91,10 @@ async function processPage(
 		throw new ProcessingError(error.message)
 	})
 
-	// Write HTML debug output
-	await writeDebugFile({ hostname, isLocal }, htmlContent, 'raw', 'html')
+	// Write HTML debug output if local
+	if (isLocal) {
+		await writeDebugFile(hostname, htmlContent, 'raw', 'html')
+	}
 
 	// Convert to markdown
 	const markdown = await (page.evaluate as any)(
@@ -215,22 +145,39 @@ async function processPage(
 		throw new ProcessingError(error.message)
 	})
 
-	// Write Markdown debug output
-	await writeDebugFile({ hostname, isLocal }, markdown, 'turndown', 'md')
+	// Write Markdown debug output if local
+	if (isLocal) {
+		await writeDebugFile(hostname, markdown, 'turndown', 'md')
+	}
 
 	return markdown || 'No content after conversion'
 }
 
-// Page processing for regular Puppeteer
-export async function processPuppeteerPage(
-	page: PuppeteerPage,
-): Promise<string> {
+// Debug file writing for local development
+async function writeDebugFile(
+	hostname: string,
+	content: string,
+	stage: string,
+	extension: string,
+): Promise<void> {
+	try {
+		const { writeFile } = await import('fs/promises')
+		const { join } = await import('path')
+		const filename = `${hostname}.${stage}.${extension}`
+		const filepath = join('_debug', filename)
+		await writeFile(filepath, content, 'utf-8')
+		console.log(`[DEBUG] Wrote ${stage} content to ${filepath}`)
+	} catch (error) {
+		console.error(`Failed to write debug file: ${error}`)
+	}
+}
+
+// Page processing for regular Puppeteer (local)
+export async function processPuppeteerPage(page: Page): Promise<string> {
 	return processPage(page, true)
 }
 
-// Page processing for Cloudflare Puppeteer
-export async function processCloudFlarePage(
-	page: CloudflarePage,
-): Promise<string> {
+// Page processing for Cloudflare Puppeteer (worker)
+export async function processCloudFlarePage(page: Page): Promise<string> {
 	return processPage(page, false)
 }
