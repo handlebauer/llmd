@@ -32,7 +32,13 @@ const eslintConfig = [
 		},
 	},
 	{
-		ignores: ['dist/**', 'node_modules/**', '.wrangler/**', 'test/**'],
+		ignores: [
+			'dist/**',
+			'node_modules/**',
+			'.wrangler/**',
+			'test/**',
+			'.github/**',
+		],
 	},
 ]
 

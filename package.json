@@ -10,7 +10,9 @@
 		"test": "bun test",
 		"cf-typegen": "wrangler types",
 		"cli": "bun src/handlers/cli.ts",
-		"lint": "eslint \"**/*.{ts,tsx}\""
+		"format": "prettier --write \"**/*.{ts,tsx}\"",
+		"lint": "eslint \"**/*.{ts,tsx}\"",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.6.4",
