@@ -15,6 +15,11 @@ describe('Links Endpoint', () => {
 		'https://example.com/pricing',
 		'https://example.com/features',
 		'https://example.com/about',
+		'https://example.com/docs',
+		'https://example.com/getting-started',
+		'https://example.com/support',
+		'https://example.com/contact',
+		'https://example.com/faq',
 	]
 
 	beforeEach(() => {
